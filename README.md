@@ -61,8 +61,8 @@ Clona el repositorio y configura un entorno virtual:
 
 ```bash
 # Clonar el proyecto
-git clone https://github.com/tu-usuario/flask-vision3d.git
-cd flask-vision3d
+git clone https://github.com/danielzorita/vision3d.git
+cd vision3d-main
 
 # Crear entorno virtual
 python -m venv venv
