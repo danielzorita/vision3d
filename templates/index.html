@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' https://cdn.tailwindcss.com https://ajax.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://jbowyer-hunyuan3d-2-1.hf.space https://huggingface.co; model-src 'self' blob:;">
+  <title>3D Model Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mosaic.css') }}">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0c0c0c;
+      color: #ffffff;
+      overflow-x: hidden;
+    }
+
+    .card {
+      background-color: rgba(18, 18, 18, 0.4);
+      backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 2.5rem;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-primary {
+      background-color: #ffffff;
+      color: #000000;
+      font-weight: 600;
+      border-radius: 9999px;
+      transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: scale(1.05);
+      background-color: #f8f8f8;
+      box-shadow: 0 8px 25px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.3;
+    }
+
+    #dropzone.dragging {
+      background-color: rgba(255, 255, 255, 0.05);
+      border-color: #ffffff;
+    }
+
+    #upload-preview {
+      filter: blur(30px);
+      opacity: 0;
+      transition: filter 1.5s ease-out, opacity 0.8s ease-in;
+    }
+
+    #upload-preview.loaded {
+      filter: blur(0px);
+      opacity: 1;
+    }
+
+    .noise {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.012;
+      background-image: url('data:image/svg+xml;charset=utf-8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    }
+
+    .nav-glass {
+      background: rgba(12, 12, 12, 0.1);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+  </style>
+</head>
+
+<body class="antialiased min-h-screen pb-20 bg-[#0c0c0c]">
+  <div class="noise"></div>
+
+  <!-- Dynamic Flow Mosaic -->
+  <div id="mosaic-container">
+    <div id="mosaic-grid"></div>
+  </div>
+  <div id="mosaic-overlay"></div>
+  <div id="mosaic-vignette"></div>
+
+  <!-- Navigation Header 
+  <header class="fixed top-0 left-0 w-full z-50 nav-glass px-8 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="font-bold tracking-tight text-xl">Vision 3D</span>
+    </div>
+    <div class="flex items-center gap-6">
+      <button
+        class="nav-glass px-4 py-2 rounded-full border border-white/20 text-sm font-medium hover:bg-white/10 transition-colors">SignIn</button>
+    </div>
+  </header>-->
+
+  <main class="relative pt-32 px-6 flex flex-col items-center">
+    <!-- Panoramic Master Container Card -->
+    <div class="card w-full max-w-screen-2xl p-4 md:px-12 md:py-10 flex flex-col md:flex-row gap-12 min-h-[680px]">
+
+      <!-- Left Column: Controls & Info -->
+      <div class="flex-1 flex flex-col gap-6">
+        <div class="space-y-2">
+          <div class="flex flex-col gap-1">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tighter text-white">VISION 3D</h1>
+            <a href="https://www.linkedin.com/in/daniel-zorita-fontanet-968a482b4" target="_blank"
+              class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#0077b5] font-bold hover:opacity-80 transition-opacity">
+              <span>Developed by Daniel Zorita</span>
+              <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                <path
+                  d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+              </svg>
+            </a>
+          </div>
+          <p class="text-gray-400 text-sm leading-relaxed max-w-sm">
+            Neural asset reconstruction pipeline. Transform single-view 2D captures into high-fidelity 3D meshes using
+            our decentralized synthesis engine.
+          </p>
+        </div>
+
+        <!-- Compact Upload Area -->
+        <div id="dropzone"
+          class="relative aspect-square md:aspect-video w-full rounded-3xl border-2 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center p-6 cursor-pointer overflow-hidden transition-all duration-300">
+          <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+          <div id="upload-idle" class="text-center pointer-events-none">
+            <svg class="w-8 h-8 text-white/40 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-width="2"></path>
+            </svg>
+            <p class="text-white/60 text-xs font-medium uppercase tracking-wider">Upload Source</p>
+          </div>
+          <!-- Preview Overlay -->
+          <div id="upload-preview"
+            class="hidden absolute inset-0 bg-cover bg-center rounded-3xl z-10 pointer-events-none"></div>
+        </div>
+
+        <!-- Status & Actions -->
+          <div class="mt-auto space-y-6">
+            <div class="space-y-2">
+              <div class="flex justify-between items-end">
+                <span id="system-status" class="text-[10px] uppercase tracking-widest text-[#ff3b3b] font-bold">System
+                  IDLE</span>
+                <span class="text-[10px] text-white/30 font-mono">0x42f..7a</span>
+              </div>
+              <!-- Red Progress Bar (Matches Image) -->
+              <div id="progress-bar" class="h-1 bg-white/5 rounded-full overflow-hidden">
+                <div id="progress-indicator"
+                  class="h-full bg-[#ff3b3b] w-0 transition-all duration-500 shadow-[0_0_10px_#ff3b3b]"></div>
+              </div>
+            </div>
+
+          <button id="generate-btn" disabled
+            class="btn-primary w-full h-14 flex items-center justify-center shadow-lg active:scale-[0.98] transition-all text-sm uppercase tracking-widest">
+            Synthesize Model
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: 3D Preview (Expanded) -->
+      <div
+        class="flex-[2.3] relative rounded-[2.5rem] bg-black/40 border border-white/5 overflow-hidden flex flex-col items-center justify-center min-h-[400px] md:min-h-full">
+
+        <!-- Model Status Overlay -->
+        <div id="status-overlay"
+          class="absolute inset-0 z-20 flex flex-col items-center justify-center text-center p-12 bg-[#0c0c0c]/80 backdrop-blur-xl transition-all duration-500">
+          <div id="loading-spinner" class="hidden mb-8">
+            <div class="w-12 h-12 border-4 border-white/10 border-t-[#ff3b3b] rounded-full animate-spin"></div>
+          </div>
+          <div id="status-icon-container" class="mb-6">
+            <svg class="w-20 h-20 text-white/5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+            </svg>
+          </div>
+          <h3 id="status-title" class="text-xl font-bold mb-3 tracking-tight">PREVIEW 3D</h3>
+          <p id="status-desc" class="text-white/40 text-sm max-w-[280px]">Reconstructed geometry will be displayed in
+            this viewport.</p>
+        </div>
+
+        <model-viewer id="3d-viewer" class="w-full h-full z-10 hidden" camera-controls auto-rotate shadow-intensity="1"
+          background-color="#0c0c0c" exposure="1.0">
+          <div slot="progress-bar" class="hidden"></div>
+        </model-viewer>
+
+        <!-- Download Overlay -->
+        <div class="absolute bottom-8 right-8 z-30">
+          <a id="download-link" href="#"
+            class="hidden bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 px-6 py-3 rounded-full text-white text-xs font-bold uppercase tracking-widest transition-all">
+            Export .GLB
+          </a>
+        </div>
+
+        <div class="absolute top-8 left-8 z-30 pointer-events-none opacity-20">
+          <span class="text-[10px] font-mono tracking-widest">VIEWPORT_MAIN</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/mosaic.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+
+</html>
