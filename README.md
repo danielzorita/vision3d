@@ -78,7 +78,7 @@ Crea un archivo `.env` en el directorio raíz:
 
 ```env
 MI_TOKEN=tu_token_de_huggingface_aqui
-MODEL_SPACE=AliothTalks/Hunyuan3D-2.1
+MODEL_SPACE=Tencent/Hunyuan3D-2
 SECRET_KEY=una_clave_secreta_aleatoria
 ```
 

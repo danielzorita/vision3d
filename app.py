@@ -16,7 +16,7 @@ MI_TOKEN = os.getenv("MI_TOKEN")
 if not MI_TOKEN:
     print("❌ WARNING: MI_TOKEN not found in .env file. Generation will likely fail.")
 
-MODEL_SPACE = os.getenv("MODEL_SPACE", "AliothTalks/Hunyuan3D-2.1")
+MODEL_SPACE = os.getenv("MODEL_SPACE", "Tencent/Hunyuan3D-2")
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
@@ -102,7 +102,7 @@ def generate_3d():
                 )
             except Exception as e:
                 # Fallback: Si falla por las texturas, intentamos solo la forma (shape)
-                if "tex_pipeline" in str(e) or "texture" in str(e).lower():
+                if "tex_pipeline" in str(e) or "texture" in str(e).lower() or "NameError" in str(e):
                     print("⚠️ Texture pipeline failed, falling back to shape-only generation...")
                     result = client.predict(
                         image=handle_file(filepath),
@@ -125,8 +125,10 @@ def generate_3d():
             print(f"✅ Respuesta recibida: {result}")
             
             path_modelo_3d = None
-            if isinstance(result, (list, tuple)) and len(result) >= 2:
-                file_info = result[1]
+            if isinstance(result, (list, tuple)) and len(result) >= 1:
+                # Si es generación completa (5 elementos), el archivo está en result[1]
+                # Si es generación de forma (4 elementos), el archivo está en result[0]
+                file_info = result[1] if len(result) >= 5 else result[0]
                 if isinstance(file_info, dict):
                     path_modelo_3d = file_info.get('value')
                 elif isinstance(file_info, str):
